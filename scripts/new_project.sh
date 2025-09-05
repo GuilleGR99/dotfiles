@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
-set -e
+
+# exit script if fails
+set -euo pipefail
 
 PROJECT="$1"
 
@@ -25,15 +27,85 @@ def test_dummy():
 EOF
 
 # 4. Add dev dependencies for docs
-uv add --dev sphinx myst-parser
+uv add --dev mkdocs
 
-# 5. Create docs/ with Sphinx
-mkdir docs
-cd docs
-uv run sphinx-quickstart -q -p "$PROJECT" -a "Guillermo" -v "0.1.0" --sep --ext-autodoc --ext-viewcode
-cd ..
+# 5. Add dev dependencies for mkdocs plugins
+uv add --dev mkdocs-autorefs \
+mkdocs-gen-files \
+mkdocs-literate-nav \
+mkdocs-section-index \
+mkdocs-git-revision-date-localized-plugin \
+mkdocs-macros-plugin
 
-# 6. Update pyproject.toml to use src/ layout
+# 6. Create docs/ and mkdocs.yml into /<PROJECT>/<PROJECT>
+uv run mkdocs new "$PROJECT"
+
+# 7. Move docs/ and mkdocs.yml from /<PROJECT>/<PROJECT> into /<PROJECT>
+mv "$PROJECT"/* .
+
+# 8. /<PROJECT>/<PROJECT> is not needed now
+rm -r "$PROJECT"
+
+# 9. Modify mkdocs.yml
+cat >> mkdocs.yml <<EOF
+
+site_name: "$PROJECT"
+repo_url: https://github.com/GuilleGR99/"$PROJECT"
+repo_name: GuilleGR99/"$PROJECT"
+
+theme:
+  name: readthedocs
+  features:
+    - navigation.expand
+    - navigation.sections
+    - navigation.instant
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+  palette:
+    scheme: default
+    primary: indigo
+    accent: deep purple
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: ["src"]   # important: points to your code
+          options:
+            docstring_style: google     # or numpy / sphinx
+            show_source: true
+            # Automatically document submodules
+            recurse: true
+  - autorefs                       # automatic cross-references
+  - gen-files:                     # generate files dynamically
+  - literate-nav:                  # define navigation in docs/ itself
+  - section-index:                 # make folder index.md the landing page
+  - git-revision-date-localized:   # show last updated date
+      fallback_to_build_date: true
+  - macros                         # use variables/macros inside markdown
+
+markdown_extensions:
+  - admonition
+  - footnotes
+  - def_list
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+
+watch:
+  - src
+
+EOF
+
+# 10. Update pyproject.toml to use src/ layout
 if ! grep -q "\[tool.uv.sources."$PROJECT"\]" pyproject.toml; then
 cat >> pyproject.toml <<EOF
 
