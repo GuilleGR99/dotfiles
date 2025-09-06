@@ -32,12 +32,12 @@ uv add --dev mkdocs
 # 5. Add dev dependencies for mkdocs plugins
 uv add --dev mkdocs-material \
 mkdocstrings\[python\] \
+ghp-import \
 mkdocs-autorefs \
 mkdocs-gen-files \
 mkdocs-literate-nav \
 mkdocs-section-index \
 mkdocs-git-revision-date-localized-plugin \
-mkdocs-macros-plugin
 
 # 6. Create docs/ and mkdocs.yml into /<PROJECT>/<PROJECT>
 uv run mkdocs new "$PROJECT"
@@ -62,7 +62,7 @@ EOF
 cat >> mkdocs.yml <<EOF
 
 site_name: "$PROJECT"
-repo_url: https://github.com/GuilleGR99/$PROJECT
+repo_url: https://GuilleGR99.github.io/test_project/
 repo_name: GuilleGR99/$PROJECT
 
 theme:
@@ -97,7 +97,7 @@ plugins:
   - literate-nav:                  # define navigation in docs/ itself
   - section-index:                 # make folder index.md the landing page
   # - git-revision-date-localized:   # show last updated date
-      fallback_to_build_date: true
+  #     fallback_to_build_date: true
   # - macros                         # use variables/macros inside markdown
 
 markdown_extensions:
