@@ -10,15 +10,47 @@ if [ -z "$PROJECT" ]; then
     exit 1
 fi
 
-# 1. Create base project with uv
+#### PROJECT CREATION ####
+
+# Create base project with uv
 uv init "$PROJECT"
 cd "$PROJECT"
 
-# 2. Create src/ layout
-mkdir -p src/"$PROJECT"
-mv main.py src/"$PROJECT"/__init__.py
+# Create src/ layout
+PACKAGE=$(echo "$PROJECT" | tr '[:upper:]' '[:lower:]' | tr -c '[:alnum:]' '_')
+mkdir -p src/"$PACKAGE"
+mv main.py src/"$PACKAGE"/__init__.py
 
-# 3. Create tests/ folder
+# Update pyproject.toml to use src/ layout
+if ! grep -q "\[tool.uv.sources."$PACKAGE"\]" pyproject.toml; then
+cat >> pyproject.toml <<EOF
+
+[tool.uv.sources."$PACKAGE"]
+path = "src"
+EOF
+fi
+
+### GIT ###
+
+cat > .gitignore <<EOF
+__pycache__/
+.venv/
+.uv/
+site/
+*.pyc
+.DS_Store
+EOF
+
+# # initialize a repo and commit once
+# git init
+# git add .
+# git commit -m "Initial commit"
+
+#### TEST ####
+
+uv add --dev pytest
+
+# Create tests/ folder
 mkdir -p tests
 touch tests/__init__.py
 cat > tests/test_example.py <<EOF
@@ -26,10 +58,12 @@ def test_dummy():
     assert 1 + 1 == 2
 EOF
 
-# 4. Add dev dependencies for docs
+#### DOCUMENTATION ####
+
+# Add dev dependencies mkdocs for documentation
 uv add --dev mkdocs
 
-# 5. Add dev dependencies for mkdocs plugins
+# Add dev dependencies for mkdocs plugins
 uv add --dev mkdocs-material \
 mkdocstrings\[python\] \
 ghp-import \
@@ -37,16 +71,16 @@ mkdocs-autorefs \
 mkdocs-gen-files \
 mkdocs-literate-nav \
 mkdocs-section-index \
-mkdocs-git-revision-date-localized-plugin \
+# mkdocs-git-revision-date-localized-plugin
 
-# 6. Create docs/ and mkdocs.yml into /<PROJECT>/<PROJECT>
-uv run mkdocs new "$PROJECT"
+# Create docs/ and mkdocs.yml into /<PROJECT>/<PROJECT>
+uv run mkdocs new "$PACKAGE"
 
-# 7. Move docs/ and mkdocs.yml from /<PROJECT>/<PROJECT> into /<PROJECT>
-mv "$PROJECT"/* .
+# Move docs/ and mkdocs.yml from /<PROJECT>/<PROJECT> into /<PROJECT>
+mv "$PACKAGE"/* .
 
-# 8. /<PROJECT>/<PROJECT> is not needed now
-rm -r "$PROJECT"
+# /<PROJECT>/<PROJECT> is not needed now
+rm -r "$PACKAGE"
 
 # Create gen_api.py inside docs to be used by gen-files mkdocs plugin
 cat >>docs/gen_api.py <<EOF
@@ -55,15 +89,15 @@ from mkdocs_gen_files import open as gen_open
 
 with gen_open("api.md", "w") as f:
     f.write("# API Reference\n\n")
-    f.write("::: $PROJECT.main\n")
+    f.write("::: ${PACKAGE}\n")
 EOF
 
-# 9. Modify mkdocs.yml
+# Modify mkdocs.yml
 cat >> mkdocs.yml <<EOF
 
 site_name: "$PROJECT"
-repo_url: https://GuilleGR99.github.io/test_project/
-repo_name: GuilleGR99/$PROJECT
+repo_url: https://GuilleGR99.github.io/$PACKAGE/
+repo_name: GuilleGR99/$PACKAGE
 
 theme:
   name: material
@@ -119,19 +153,34 @@ watch:
 
 EOF
 
-# 10. Update pyproject.toml to use src/ layout
-if ! grep -q "\[tool.uv.sources."$PROJECT"\]" pyproject.toml; then
+#### QUALITY ####
+
+# Add dev dependencies ruff for code quality
+uv add --dev ruff
+
+# Add ruff plugins
 cat >> pyproject.toml <<EOF
+[tool.ruff]
+line-length = 88         # como Black
+# target-version = "py311" # versión de Python
 
-[tool.uv.sources."$PROJECT"]
-path = "src"
+[tool.ruff.lint]
+extend-select = [
+  "I",    # Ordenar imports (isort)
+  "UP",   # Modernizar sintaxis (pyupgrade)
+  "B",    # Detectar bugs comunes (bugbear)
+  "N",    # Convenciones de nombres (pep8-naming)
+#  "S",    # Chequeos de seguridad básicos (bandit)
+#  "C4",   # Buenas prácticas en comprensiones
+#  "T20",  # Evitar prints en producción
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "lf"
 EOF
-fi
-
-# # initialize a repo and commit once
-# git init
-# git add .
-# git commit -m "Initial commit"
 
 
 echo "Project '$PROJECT' is ready."
