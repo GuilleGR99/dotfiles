@@ -17,9 +17,10 @@ uv init "$PROJECT"
 cd "$PROJECT"
 
 # Create src/ layout
-PACKAGE=$(echo "$PROJECT" | tr '[:upper:]' '[:lower:]' | tr -c '[:alnum:]' '_')
+# PACKAGE=$(echo "$PROJECT" | tr '[:upper:]' '[:lower:]' | tr -c '[:alnum:]' '_')
+PACKAGE=$(echo "$PROJECT")
 mkdir -p src/"$PACKAGE"
-mv main.py src/"$PACKAGE"/__init__.py
+mv main.py src/"$PACKAGE"/__main__.py
 
 # Update pyproject.toml to use src/ layout
 if ! grep -q "\[tool.uv.sources."$PACKAGE"\]" pyproject.toml; then
